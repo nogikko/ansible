@@ -1,0 +1,51 @@
+#ansible-playbook -i hosts change_hostname.yml
+- hosts: amzn1 ubuntu16
+  become: yes
+  tasks: 
+   - name: "OS Type" 
+     debug: msg="OS {{ansible_distribution}} {{ansible_service_mgr}}"
+   
+   # Amazon linux 1
+   - name: replace /etc/sysconfig/network
+     replace: 
+       path: /etc/sysconfig/network
+       regexp: '^HOSTNAME=.*'
+       replace: "HOSTNAME={{inventory_hostname}}"
+     when: (ansible_distribution == "Amazon" and ansible_service_mgr == "upstart")
+
+   # Ubuntu 16
+   - name: replace /etc/hostname
+     copy:
+       dest: /etc/hostname
+       content: "{{inventory_hostname}}"
+     when: (ansible_distribution == "Ubuntu" and ansible_distribution_major_version == "16")
+  
+   - name: "execute hostname command"
+     hostname:
+      name: "{{inventory_hostname}}"
+  
+   - name: check /etc/hosts
+     shell: grep -q -c "{{inventory_hostname}}" /etc/hosts ; echo $?
+     register: already_hostname
+     ignore_errors: true
+   - debug: var=already_hostname.stdout   
+  
+   #Amazon linux 1 --checkだとエラーでるのでそのまま実行
+   - name: replace /etc/hosts
+     replace: 
+       path: /etc/hosts
+       regexp: '^127.0.0.1   '
+       replace: "127.0.0.1   {{inventory_hostname}} {{inventory_hostname}}.localdomain"
+     when: (already_hostname.stdout == '1' and ansible_distribution == "Amazon" and ansible_service_mgr == "upstart")
+  
+   #Ubuntu16 --checkだとエラーでるのでそのまま実行
+   - name: replace /etc/hosts
+     replace: 
+       path: /etc/hosts
+       regexp: '^127.0.0.1'
+       replace: "127.0.0.1 {{inventory_hostname}}"
+     when: (already_hostname.stdout == '1' and ansible_distribution == "Ubuntu" and ansible_distribution_major_version == "16")
+   
+
+  
+   

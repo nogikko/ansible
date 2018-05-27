@@ -1,0 +1,14 @@
+[amzn1]
+test-ec2
+
+[ubuntu16]
+test-ubuntu
+
+
+[amzn1:vars]
+ansible_ssh_user=ec2-user
+
+[ubuntu16:vars]
+ansible_ssh_user=ubuntu
+
+
